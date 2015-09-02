@@ -8,8 +8,11 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.Bundle;
 
+import android.os.Handler;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
 
 import java.util.concurrent.TimeUnit;
@@ -25,18 +28,28 @@ public class MyActivity extends Activity {
 
     class Word extends View {
 
+        private final static int MOVE_UP = 2;
+        private final static int MOVE_DOWN = 1;
+        private final static int DO_NOT_MOVE = 0;
+
+
         private Paint mPaint = new Paint();
         private Rect mTextBoundRect = new Rect();
 
-        float width, height, centerX, centerY;
-        String text = "word";
+        private float width, height, centerX, centerY;
+        private String text = "word";
 
-        float dragY = 0;
+        private int selfMoveDirection = 0;
+
+        private float dragY = 0;
 
         public Word(Context context) {
             super(context);
+            this.setWillNotDraw(false);
         }
 
+
+        @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
 
@@ -74,11 +87,47 @@ public class MyActivity extends Activity {
                     mPaint
             );
 
+            try {
+
+                if (selfMoveDirection == Word.MOVE_UP) {
+
+
+                    centerY -= 30;
+                    //TimeUnit.MILLISECONDS.sleep(1);
+                    invalidate();
+
+                    if (centerY < 1) {
+                        selfMoveDirection = Word.DO_NOT_MOVE;
+                        nextWord();
+                        centerY = height / 2;
+                        invalidate();
+                    }
+
+                } else if (selfMoveDirection == Word.MOVE_DOWN) {
+
+                    Log.d("MyTag", "downY: " + centerY);
+                    centerY += 30;
+                    //TimeUnit.MILLISECONDS.sleep(1);
+                    invalidate();
+
+                    if (centerY > height) {
+                        selfMoveDirection = Word.DO_NOT_MOVE;
+                        nextWord();
+                        centerY = height / 2;
+                        invalidate();
+                    }
+
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
         }
 
 
         @Override
-        public boolean onTouchEvent(MotionEvent event) {
+        public synchronized boolean onTouchEvent(MotionEvent event) {
 
             // define Y-coordinate of the Touch-event
             float evY = event.getY();
@@ -103,38 +152,54 @@ public class MyActivity extends Activity {
 
                     if ( (evY - dragY) < (height/4) ) { //upper quoter of the screen "I KNOW"
 
-                        try {
-
-                            while (centerY > 1) {
-                                Log.d("MyTag", "upY: "+centerY);
-                                centerY-=20;
-                                invalidate();
-                                TimeUnit.MILLISECONDS.sleep(50);
-                            }
-
-                        }catch (Exception e) {
-                            e.printStackTrace();
-                        }
-
-                        nextWord();
+                        selfMoveDirection = Word.MOVE_UP;
+                        invalidate();
+                        //nextWord();
 
                     } else if ((evY - dragY) > (height*3/4)) { //lower quoter of the screen "I FORGOT"
 
+                        selfMoveDirection = Word.MOVE_DOWN;
+                        invalidate();
+
                         Log.d("MyTag", "downY: "+centerY);
-                        nextWord();
+                        //nextWord();
 
                     } else if (Math.abs(centerY - height / 2) < 20) {
 
                         translateWord ();
 
+                    } else {
+                        centerY = height / 2;
                     }
 
-                    centerY = height / 2;       //return the text' center to the center of the screen
+                    //centerY = height / 2;       //return the text' center to the center of the screen
                     invalidate();               //re-draw the text
                     break;
             }
             return true;
         }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
         private void nextWord () {
@@ -146,7 +211,6 @@ public class MyActivity extends Activity {
             }
 
         }
-
 
         private void translateWord () {
 
